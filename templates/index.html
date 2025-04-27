@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Deep Web SQL Sentinel</title>
+    <style>
+        body {
+            background-color: #23395d; /* Classy ashy blue background */
+            font-family: 'Arial', sans-serif;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1e3a8a;
+            padding: 10px 20px;
+        }
+
+        .navbar-brand {
+            color: white;
+            font-size: 1.5em;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        .navbar a:hover {
+            background-color: #3b82f6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .welcome-section {
+            padding: 40px 0;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        .welcome-section h1 {
+            color: #ffffff;
+            font-size: 3em;
+        }
+
+        .welcome-section .lead {
+            color: #a1c6ea;
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+
+        .register-section {
+            background-color: #1e3a8a; /* Darker blue for form background */
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            animation: fadeInUp 2s ease-in-out;
+        }
+
+        .register-section h2 {
+            color: #ffffff;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #a1c6ea;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #2e4a7b; /* Darker blue for input fields */
+            color: white;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e40af;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="#" class="navbar-brand">Deep Web SQL Sentinel</a>
+        <a href="{{ url_for('login') }}">Login</a>
+    </div>
+    <div class="container">
+        <div class="welcome-section">
+            <h1>Welcome to Deep Web SQL Sentinel</h1>
+            <p class="lead">Guarding your data with the most advanced SQL security measures.</p>
+        </div>
+        
+        <div class="register-section">
+            <h2>Register</h2>
+            <form action="{{ url_for('register') }}" method="post">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

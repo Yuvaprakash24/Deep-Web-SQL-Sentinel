@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Security Activity Log{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #23395d; /* Classy ashy blue background */
+        font-family: 'Arial', sans-serif;
+        color: #ffffff;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #1e3a8a;
+        padding: 10px 20px;
+    }
+
+    .navbar-brand {
+        color: white;
+        font-size: 1.5em;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    .navbar a {
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease-in-out;
+    }
+
+    .navbar a:hover {
+        background-color: #3b82f6;
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .activity-section {
+        background-color: #1e3a8a; /* Darker blue for section background */
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        animation: fadeInUp 2s ease-in-out;
+    }
+
+    .activity-section h1 {
+        color: #ffffff;
+        margin-bottom: 20px;
+        animation: fadeIn 2s ease-in-out;
+    }
+
+    .activity-section p, .activity-section ul, .activity-section li {
+        color: #ffffff;
+    }
+
+    .activity-section ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .activity-section li {
+        background-color: #2e4a7b;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+        animation: fadeIn 2s ease-in-out;
+    }
+
+    .safe-status {
+        color: #4caf50; /* Green for safe */
+    }
+
+    .malicious-status {
+        color: #f44336; /* Red for malicious */
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div class="navbar">
+    <a href="#" class="navbar-brand">Deep Web SQL Sentinel</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+
+<div class="container">
+    <div class="activity-section">
+        <h1>Security Activity Log</h1>
+        {% if user %}
+            <p>Welcome, {{ user.username }}!</p>
+        {% endif %}
+        {% if attempts %}
+            <ul>
+            {% for attempt in attempts %}
+                <li>
+                    {{ attempt.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} - 
+                    {% if attempt.is_malicious %}
+                        <span class="malicious-status">Malicious</span>
+                    {% else %}
+                        <span class="safe-status">Safe</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No activity recorded.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
