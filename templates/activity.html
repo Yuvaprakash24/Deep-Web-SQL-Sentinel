@@ -113,7 +113,7 @@
             <ul>
             {% for attempt in attempts %}
                 <li>
-                    {{ attempt.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} - 
+                    {{ attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p') }} - 
                     {% if attempt.is_malicious %}
                         <span class="malicious-status">Malicious</span>
                     {% else %}

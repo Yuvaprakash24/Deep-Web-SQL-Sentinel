@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message  # type: ignore
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
+import pytz
+from datetime import datetime
 
 app = Flask(__name__)  # Corrected the typo here
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -60,7 +62,10 @@ def register():
         email = request.form['email']
         username = request.form['username']
         password = request.form['password']
-        
+        confirm_password = request.form['confirm_password']
+        if password != confirm_password:
+            flash('Passwords do not match. Please try again.', 'danger')
+            return render_template('index.html')
         hashed_password = generate_password_hash(password)
         new_user = User(email=email, username=username, password=hashed_password)
         db.session.add(new_user)
@@ -87,25 +92,36 @@ def login():
         if user:
             if check_password_hash(user.password, password):
                 session['user_id'] = user.id
-                new_attempt = LoginAttempt(user_id=user.id, status='Success', is_malicious=is_malicious)
+                # Use IST for timestamp
+                ist = pytz.timezone('Asia/Kolkata')
+                now_ist = datetime.now(ist)
+                new_attempt = LoginAttempt(user_id=user.id, status='Success', is_malicious=is_malicious, timestamp=now_ist)
                 db.session.add(new_attempt)
                 db.session.commit()
 
                 if is_malicious:
-                    attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp}"
+                    attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
                     send_email(user.email, attempt_info)
 
                 return redirect(url_for('activity'))
             else:
-                new_attempt = LoginAttempt(user_id=user.id, status='Failed', is_malicious=is_malicious)
+                ist = pytz.timezone('Asia/Kolkata')
+                now_ist = datetime.now(ist)
+                new_attempt = LoginAttempt(user_id=user.id, status='Failed', is_malicious=is_malicious, timestamp=now_ist)
                 db.session.add(new_attempt)
                 db.session.commit()
 
                 if is_malicious:
-                    attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp}"
+                    attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
                     send_email(user.email, attempt_info if user else email)
-
-        flash('Login failed. Check your email or password.', 'danger')
+                else:
+                    flash('Invalid email or password.', 'danger')
+        else:
+            # No user found, but still check for malicious
+            if is_malicious:
+                flash('Login failed. Check your email or password.', 'danger')
+            else:
+                flash('Invalid email or password.', 'danger')
     return render_template('login.html')
 
 @app.route('/activity')
