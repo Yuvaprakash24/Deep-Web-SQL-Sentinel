@@ -5,8 +5,12 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import pytz
 from datetime import datetime
+from MODELS.random_forest_model import check_login_attempt  # Import the model function
 
-app = Flask(__name__)  # Corrected the typo here
+# Retrain the model every time the server starts
+exec(open('MODELS/train_model.py').read())
+
+app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database/users.db')
@@ -22,35 +26,21 @@ db = SQLAlchemy(app)
 # Ensure the database directory exists
 os.makedirs(os.path.join(basedir, 'database'), exist_ok=True)
 
-malicious_queries = [
-    "1=1", "or '1'='1'", "' or '1'='1'", '" or "1"="1"', "' or '1'='1' -- ", '1" or "1"="1', 
-    "select", "drop", "delete", "insert", "update", "alter", "create", "exec", 
-    " union ", "xp_cmdshell", "--", ";--", ";", "/", "/", "@@", 
-    "char(", "nchar(", "varchar(", "nvarchar(", 
-    "'; exec master..xp_cmdshell", "-- ", "' or 1=1 -- ", 
-    '" or 1=1 -- ', "' or '' = '", "admin' --", "admin' #", "admin'/*", 
-    "admin' or '1'='1", "admin' or '1'='1'--", "admin' or '1'='1'/*", 
-    "admin' or 1=1", "admin' or 1=1 --", "admin' or 1=1/*", "admin') or ('1'='1", 
-    "admin') or ('1'='1'--", "admin') or ('1'='1'/*", "' or '1'='1", 
-    "or 1=1", "or 1=1 --", "or 1=1/", "' or ''='", "' or 1 --", "' or 1/",
-    "1' or '1'='1", "1') or ('1'='1", '" or "1"="1', '" or "1"="1" --', '" or "1"="1"/*',
-    "select * from 1==1"  
-]
-
 class User(db.Model):
-    __tablename__ = 'users'  # Match the table name in init_db.py
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     username = db.Column(db.String(150), nullable=False)
     password = db.Column(db.String(150), nullable=False)
 
 class LoginAttempt(db.Model):
-    __tablename__ = 'login_attempts'  # Match the table name in init_db.py
+    __tablename__ = 'login_attempts'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Update foreign key reference
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     is_malicious = db.Column(db.Boolean, default=False)
+    is_suspicious = db.Column(db.Boolean, default=False)  # Add suspicious status
 
 @app.route('/')
 def index():
@@ -161,19 +151,30 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        is_malicious = any(keyword in password.lower() for keyword in malicious_queries)
         
         user = User.query.filter_by(email=email).first()
         if user:
+            # Use the Random Forest model to check the login attempt
+            result = check_login_attempt(user, request)
+            is_malicious = result == 'malicious'
+            is_suspicious = result == 'suspicious'
+            
             if check_password_hash(user.password, password):
                 session['user_id'] = user.id
                 # Use IST for timestamp
                 ist = pytz.timezone('Asia/Kolkata')
                 now_ist = datetime.now(ist)
-                new_attempt = LoginAttempt(user_id=user.id, status='Success', is_malicious=is_malicious, timestamp=now_ist)
+                new_attempt = LoginAttempt(
+                    user_id=user.id, 
+                    status='Success', 
+                    is_malicious=is_malicious,
+                    is_suspicious=is_suspicious,
+                    timestamp=now_ist
+                )
                 db.session.add(new_attempt)
                 db.session.commit()
 
+                # Only send email for malicious attempts
                 if is_malicious:
                     attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
                     send_email(user.email, attempt_info)
@@ -182,17 +183,28 @@ def login():
             else:
                 ist = pytz.timezone('Asia/Kolkata')
                 now_ist = datetime.now(ist)
-                new_attempt = LoginAttempt(user_id=user.id, status='Failed', is_malicious=is_malicious, timestamp=now_ist)
+                new_attempt = LoginAttempt(
+                    user_id=user.id, 
+                    status='Failed', 
+                    is_malicious=is_malicious,
+                    is_suspicious=is_suspicious,
+                    timestamp=now_ist
+                )
                 db.session.add(new_attempt)
                 db.session.commit()
 
+                # Only send email for malicious attempts
                 if is_malicious:
                     attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
-                    send_email(user.email, attempt_info if user else email)
+                    send_email(user.email, attempt_info)
                 else:
                     flash('Invalid email or password.', 'danger')
         else:
-            # No user found, but still check for malicious
+            # Check for non-existent user
+            result = check_login_attempt(None, request)
+            is_malicious = result == 'malicious'
+            is_suspicious = result == 'suspicious'
+            
             if is_malicious:
                 flash('Login failed. Check your email or password.', 'danger')
             else:
@@ -215,7 +227,7 @@ def logout():
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
 
-if __name__ == '__main__':  # Corrected the typo here
+if __name__ == '__main__':
     app.run(debug=True)
     
     # Drop and recreate the database

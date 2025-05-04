@@ -29,6 +29,7 @@ def init_db():
                                 status TEXT NOT NULL,
                                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                                 is_malicious BOOLEAN DEFAULT 0,
+                                is_suspicious BOOLEAN DEFAULT 0,
                                 FOREIGN KEY(user_id) REFERENCES users(id)
                               )''')
             conn.commit()
