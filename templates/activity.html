@@ -87,6 +87,10 @@
         color: #f44336; /* Red for malicious */
     }
 
+    .suspicious-status {
+        color: #ff9800; /* Orange for suspicious */
+    }
+
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -116,6 +120,8 @@
                     {{ attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p') }} - 
                     {% if attempt.is_malicious %}
                         <span class="malicious-status">Malicious</span>
+                    {% elif attempt.is_suspicious %}
+                        <span class="suspicious-status">Suspicious</span>
                     {% else %}
                         <span class="safe-status">Safe</span>
                     {% endif %}

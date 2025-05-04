@@ -75,10 +75,85 @@ def register():
     return render_template('index.html')
 
 def send_email(to_email, attempt_info):
-    msg = Message('Alert: Malicious Login Attempt',
+    msg = Message('🔒 Security Alert: Suspicious Activity Detected',
                   sender='websqlsentinel@gmail.com',
                   recipients=[to_email])
-    msg.body = f'A malicious login attempt was detected with the following details:\n{attempt_info}'
+    
+    # HTML email template
+    html_template = f"""
+    <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background-color: #1e3a8a;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                    border-radius: 5px 5px 0 0;
+                }}
+                .content {{
+                    background-color: #f9f9f9;
+                    padding: 20px;
+                    border: 1px solid #ddd;
+                    border-radius: 0 0 5px 5px;
+                }}
+                .alert {{
+                    color: #d32f2f;
+                    font-weight: bold;
+                }}
+                .details {{
+                    background-color: #fff;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 15px 0;
+                }}
+                .footer {{
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                    margin-top: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>Deep Web SQL Sentinel</h2>
+            </div>
+            <div class="content">
+                <h3>Security Alert</h3>
+                <p class="alert">⚠️ Suspicious activity has been detected on your account</p>
+                
+                <div class="details">
+                    <p><strong>Activity Details:</strong></p>
+                    <p>{attempt_info}</p>
+                </div>
+                
+                <p>If you did not perform this action, please:</p>
+                <ul>
+                    <li>Change your password immediately</li>
+                    <li>Review your recent activity</li>
+                    <li>Contact support if you suspect unauthorized access</li>
+                </ul>
+                
+                <p>For your security, we recommend enabling two-factor authentication if you haven't already.</p>
+            </div>
+            <div class="footer">
+                <p>This is an automated security alert. Please do not reply to this email.</p>
+                <p>© 2024 Deep Web SQL Sentinel. All rights reserved.</p>
+            </div>
+        </body>
+    </html>
+    """
+    
+    msg.html = html_template
     mail.send(msg)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -144,6 +219,6 @@ if __name__ == '__main__':  # Corrected the typo here
     app.run(debug=True)
     
     # Drop and recreate the database
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
+    # with app.app_context():
+    #     db.drop_all()
+    #     db.create_all()
