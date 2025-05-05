@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pytz
 from datetime import datetime
 from MODELS.random_forest_model import check_login_attempt  # Import the model function
-
+# from MODELS.logistic_regression_model import check_login_attempt
 # Retrain the model every time the server starts
 exec(open('MODELS/train_model.py').read())
 
@@ -137,7 +137,7 @@ def send_email(to_email, attempt_info):
             </div>
             <div class="footer">
                 <p>This is an automated security alert. Please do not reply to this email.</p>
-                <p>© 2024 Deep Web SQL Sentinel. All rights reserved.</p>
+                <p>© 2025 Deep Web SQL Sentinel. All rights reserved.</p>
             </div>
         </body>
     </html>
