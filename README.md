@@ -5,19 +5,25 @@ A Flask-based web application that detects and prevents SQL injection attacks du
 ## Features
 
 - User registration and authentication
-- SQL injection attack detection
+- SQL injection attack detection using Machine Learning
 - Real-time email alerts for malicious attempts
+- IP-based blocking for malicious users
 - Activity logging and monitoring
 - Secure password hashing
 - Session management
+- PostgreSQL database integration
+- Vercel deployment ready
 
 ## Prerequisites
 
 - Python 3.x
+- PostgreSQL database
 - Flask
 - Flask-SQLAlchemy
 - Flask-Mail
-- SQLite3
+- Flask-Migrate
+- psycopg2-binary
+- scikit-learn (for ML model)
 
 ## Installation
 
@@ -38,25 +44,30 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Initialize the database:
+4. Create a `.env` file with the following variables:
+```env
+DATABASE_URL=your_postgresql_connection_string
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+SECRET_KEY=your_secure_secret_key
+```
+
+5. Initialize the database:
 ```bash
-python init_db.py
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
 ```
 
 ## Configuration
 
-1. Update the email settings in `app.py`:
-```python
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'your-email@gmail.com'
-app.config['MAIL_PASSWORD'] = 'your-app-password'
-```
+The application uses environment variables for configuration. Create a `.env` file with:
 
-2. Set a secure secret key:
-```python
-app.config['SECRET_KEY'] = 'your-secure-secret-key'
+```env
+DATABASE_URL=postgresql://user:password@host:port/database
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+SECRET_KEY=your-secure-secret-key
 ```
 
 ## Usage
@@ -81,24 +92,28 @@ python app.py
 
 ```
 ├── app.py                 # Main application file
-├── init_db.py            # Database initialization script
 ├── requirements.txt      # Project dependencies
-├── templates/            # HTML templates
-│   ├── base.html
-│   ├── index.html
-│   ├── login.html
-│   └── activity.html
-└── database/            # Database directory
-    └── users.db        # SQLite database file
+├── vercel.json          # Vercel deployment configuration
+├── .env                 # Environment variables (not in version control)
+├── MODELS/              # Machine Learning models
+│   ├── random_forest_model.py
+│   └── train_model.py
+└── templates/           # HTML templates
+    ├── base.html
+    ├── index.html
+    ├── login.html
+    └── activity.html
 ```
 
 ## Security Features
 
 - Password hashing using Werkzeug
-- SQL injection pattern detection
+- SQL injection pattern detection using Machine Learning
+- IP-based blocking for malicious users
 - Session management
 - Email alerts for suspicious activities
-- Secure database operations
+- Secure database operations with PostgreSQL
+- Environment variable protection
 
 ## Testing Malicious Attempts
 
@@ -111,6 +126,7 @@ To test the SQL injection detection:
    - `select * from users`
 3. Check your email for alert messages
 4. View the activity log in the dashboard
+5. Notice IP blocking for malicious attempts
 
 ## Contributing
 

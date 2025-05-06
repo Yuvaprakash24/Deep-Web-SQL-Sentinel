@@ -1,27 +1,33 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask import Flask, render_template, redirect, url_for, request, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message  # type: ignore
+from flask_migrate import Migrate
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 from MODELS.random_forest_model import check_login_attempt  # Import the model function
+from dotenv import load_dotenv
 # from MODELS.logistic_regression_model import check_login_attempt
 # Retrain the model every time the server starts
 exec(open('MODELS/train_model.py').read())
 
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database/users.db')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = '21ag1a1220@gmail.com'
-app.config['MAIL_PASSWORD'] = 'yxyi fjij mrfu cteg'
+app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER')
+app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASSWORD')
 mail = Mail(app)
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Ensure the database directory exists
 os.makedirs(os.path.join(basedir, 'database'), exist_ok=True)
@@ -31,7 +37,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     username = db.Column(db.String(150), nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    password = db.Column(db.String(500), nullable=False)
 
 class LoginAttempt(db.Model):
     __tablename__ = 'login_attempts'
@@ -40,7 +46,42 @@ class LoginAttempt(db.Model):
     status = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     is_malicious = db.Column(db.Boolean, default=False)
-    is_suspicious = db.Column(db.Boolean, default=False)  # Add suspicious status
+    is_suspicious = db.Column(db.Boolean, default=False)
+    ip_address = db.Column(db.String(50), nullable=True)  # Made nullable initially
+
+class BlockedIP(db.Model):
+    __tablename__ = 'blocked_ips'
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(50), unique=True, nullable=False)
+    blocked_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    reason = db.Column(db.String(200), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)  # None means permanent block
+
+@app.before_request
+def check_blocked_ip():
+    if request.endpoint and 'static' not in request.endpoint:
+        ip = request.remote_addr
+        blocked = BlockedIP.query.filter_by(ip_address=ip).first()
+        if blocked:
+            if blocked.expires_at is None or blocked.expires_at > datetime.utcnow():
+                abort(403)  # Forbidden
+            else:
+                # Remove expired block
+                db.session.delete(blocked)
+                db.session.commit()
+
+def block_ip(ip_address, reason, duration_days=None):
+    expires_at = None
+    if duration_days:
+        expires_at = datetime.utcnow() + timedelta(days=duration_days)
+    
+    blocked = BlockedIP(
+        ip_address=ip_address,
+        reason=reason,
+        expires_at=expires_at
+    )
+    db.session.add(blocked)
+    db.session.commit()
 
 @app.route('/')
 def index():
@@ -151,6 +192,7 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        ip_address = request.remote_addr
         
         user = User.query.filter_by(email=email).first()
         if user:
@@ -169,14 +211,16 @@ def login():
                     status='Success', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
+                    ip_address=ip_address,
                     timestamp=now_ist
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
 
-                # Only send email for malicious attempts
+                # Block IP if malicious
                 if is_malicious:
-                    attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
+                    block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
+                    attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
 
                 return redirect(url_for('activity'))
@@ -188,14 +232,16 @@ def login():
                     status='Failed', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
+                    ip_address=ip_address,
                     timestamp=now_ist
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
 
-                # Only send email for malicious attempts
+                # Block IP if malicious
                 if is_malicious:
-                    attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}"
+                    block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
+                    attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
                 else:
                     flash('Invalid email or password.', 'danger')
@@ -206,6 +252,7 @@ def login():
             is_suspicious = result == 'suspicious'
             
             if is_malicious:
+                block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
                 flash('Login failed. Check your email or password.', 'danger')
             else:
                 flash('Invalid email or password.', 'danger')
@@ -229,8 +276,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
-    # Drop and recreate the database
-    # with app.app_context():
-    #     db.drop_all()
-    #     db.create_all()
