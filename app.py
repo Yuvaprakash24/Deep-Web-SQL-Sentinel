@@ -4,7 +4,6 @@ from flask_mail import Mail, Message  # type: ignore
 from flask_migrate import Migrate
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-import pytz
 from datetime import datetime, timedelta
 from MODELS.random_forest_model import check_login_attempt  # Import the model function
 from dotenv import load_dotenv
@@ -44,7 +43,7 @@ class LoginAttempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    timestamp = db.Column(db.DateTime, default=datetime.now)
     is_malicious = db.Column(db.Boolean, default=False)
     is_suspicious = db.Column(db.Boolean, default=False)
     ip_address = db.Column(db.String(50), nullable=True)  # Made nullable initially
@@ -53,7 +52,7 @@ class BlockedIP(db.Model):
     __tablename__ = 'blocked_ips'
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), unique=True, nullable=False)
-    blocked_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    blocked_at = db.Column(db.DateTime, default=datetime.now)
     reason = db.Column(db.String(200), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=True)  # None means permanent block
 
@@ -63,7 +62,7 @@ def check_blocked_ip():
         ip = request.remote_addr
         blocked = BlockedIP.query.filter_by(ip_address=ip).first()
         if blocked:
-            if blocked.expires_at is None or blocked.expires_at > datetime.utcnow():
+            if blocked.expires_at is None or blocked.expires_at > datetime.now():
                 abort(403)  # Forbidden
             else:
                 # Remove expired block
@@ -73,7 +72,7 @@ def check_blocked_ip():
 def block_ip(ip_address, reason, duration_days=None):
     expires_at = None
     if duration_days:
-        expires_at = datetime.utcnow() + timedelta(days=duration_days)
+        expires_at = datetime.now() + timedelta(days=duration_days)
     
     blocked = BlockedIP(
         ip_address=ip_address,
@@ -203,16 +202,14 @@ def login():
             
             if check_password_hash(user.password, password):
                 session['user_id'] = user.id
-                # Use IST for timestamp
-                ist = pytz.timezone('Asia/Kolkata')
-                now_ist = datetime.now(ist)
+                now_local = datetime.now()
                 new_attempt = LoginAttempt(
                     user_id=user.id, 
                     status='Success', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
                     ip_address=ip_address,
-                    timestamp=now_ist
+                    timestamp=now_local
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
@@ -225,15 +222,14 @@ def login():
 
                 return redirect(url_for('activity'))
             else:
-                ist = pytz.timezone('Asia/Kolkata')
-                now_ist = datetime.now(ist)
+                now_local = datetime.now()
                 new_attempt = LoginAttempt(
                     user_id=user.id, 
                     status='Failed', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
                     ip_address=ip_address,
-                    timestamp=now_ist
+                    timestamp=now_local
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
