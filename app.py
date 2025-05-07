@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 # Retrain the model every time the server starts
 exec(open('MODELS/train_model.py').read())
 from werkzeug.middleware.proxy_fix import ProxyFix
+import pytz
 
 # Load environment variables from .env file
 load_dotenv()
@@ -274,7 +275,8 @@ def activity():
     user_id = session['user_id']
     user = User.query.get(user_id)
     attempts = LoginAttempt.query.filter_by(user_id=user_id).all()
-    return render_template('activity.html', user=user, attempts=attempts)
+    ist = pytz.timezone('Asia/Kolkata')
+    return render_template('activity.html', user=user, attempts=attempts, ist=ist)
 
 @app.route('/logout')
 def logout():

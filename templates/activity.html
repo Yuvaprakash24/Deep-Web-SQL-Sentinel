@@ -117,7 +117,8 @@
             <ul>
             {% for attempt in attempts %}
                 <li>
-                    {{ attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p') }} - 
+                    {{ attempt.timestamp.astimezone(ist).strftime('%d-%m-%Y %I:%M:%S %p') }} - 
+                    <span style="color:#aaa;">{{ attempt.ip_address }}</span> - 
                     {% if attempt.is_malicious %}
                         <span class="malicious-status">Malicious</span>
                     {% elif attempt.is_suspicious %}
