@@ -4,7 +4,7 @@ from flask_mail import Mail, Message  # type: ignore
 from flask_migrate import Migrate
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from MODELS.random_forest_model import check_login_attempt  # Import the model function
 from dotenv import load_dotenv
 # from MODELS.logistic_regression_model import check_login_attempt
@@ -48,7 +48,7 @@ class LoginAttempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.now)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     is_malicious = db.Column(db.Boolean, default=False)
     is_suspicious = db.Column(db.Boolean, default=False)
     ip_address = db.Column(db.String(50), nullable=True)  # Made nullable initially
@@ -57,7 +57,7 @@ class BlockedIP(db.Model):
     __tablename__ = 'blocked_ips'
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), unique=True, nullable=False)
-    blocked_at = db.Column(db.DateTime, default=datetime.now)
+    blocked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     reason = db.Column(db.String(200), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=True)  # None means permanent block
 
@@ -77,7 +77,7 @@ def check_blocked_ip():
 def block_ip(ip_address, reason, duration_days=None):
     expires_at = None
     if duration_days:
-        expires_at = datetime.now() + timedelta(days=duration_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=duration_days)
     
     blocked = BlockedIP(
         ip_address=ip_address,
@@ -211,14 +211,14 @@ def login():
             
             if check_password_hash(user.password, password):
                 session['user_id'] = user.id
-                now_local = datetime.now()
+                now_utc = datetime.now(timezone.utc)
                 new_attempt = LoginAttempt(
                     user_id=user.id, 
                     status='Success', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
                     ip_address=ip_address,
-                    timestamp=now_local
+                    timestamp=now_utc
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
@@ -233,14 +233,14 @@ def login():
 
                 return redirect(url_for('activity'))
             else:
-                now_local = datetime.now()
+                now_utc = datetime.now(timezone.utc)
                 new_attempt = LoginAttempt(
                     user_id=user.id, 
                     status='Failed', 
                     is_malicious=is_malicious,
                     is_suspicious=is_suspicious,
                     ip_address=ip_address,
-                    timestamp=now_local
+                    timestamp=now_utc
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
@@ -276,6 +276,10 @@ def activity():
     user = User.query.get(user_id)
     attempts = LoginAttempt.query.filter_by(user_id=user_id).all()
     ist = pytz.timezone('Asia/Kolkata')
+    # Ensure all timestamps are UTC-aware
+    for attempt in attempts:
+        if attempt.timestamp and attempt.timestamp.tzinfo is None:
+            attempt.timestamp = attempt.timestamp.replace(tzinfo=timezone.utc)
     return render_template('activity.html', user=user, attempts=attempts, ist=ist)
 
 @app.route('/logout')
