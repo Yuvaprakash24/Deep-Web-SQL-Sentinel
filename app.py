@@ -10,11 +10,15 @@ from dotenv import load_dotenv
 # from MODELS.logistic_regression_model import check_login_attempt
 # Retrain the model every time the server starts
 exec(open('MODELS/train_model.py').read())
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+# Add ProxyFix middleware
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
@@ -191,7 +195,11 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        
+        # Debug logging for login attempt
+        print("\n=== Login Attempt Debug Info ===")
         ip_address = get_client_ip()
+        print(f"Final IP used for login attempt: {ip_address}")
         
         user = User.query.filter_by(email=email).first()
         if user:
@@ -213,12 +221,14 @@ def login():
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
+                print(f"Login attempt logged with IP: {ip_address}")
 
                 # Block IP if malicious
                 if is_malicious:
                     block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
                     attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
+                    print(f"Malicious attempt blocked for IP: {ip_address}")
 
                 return redirect(url_for('activity'))
             else:
@@ -233,12 +243,14 @@ def login():
                 )
                 db.session.add(new_attempt)
                 db.session.commit()
+                print(f"Failed login attempt logged with IP: {ip_address}")
 
                 # Block IP if malicious
                 if is_malicious:
                     block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
                     attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
+                    print(f"Malicious attempt blocked for IP: {ip_address}")
                 else:
                     flash('Invalid email or password.', 'danger')
         else:
@@ -271,9 +283,37 @@ def logout():
     return redirect(url_for('index'))
 
 def get_client_ip():
-    if request.headers.get('X-Forwarded-For'):
-        # X-Forwarded-For can be a comma-separated list of IPs
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    """
+    Get the real client IP address by checking various headers.
+    Returns the first non-private IP address found.
+    """
+    # Debug logging
+    print("\n=== IP Detection Debug Info ===")
+    print(f"Remote Addr: {request.remote_addr}")
+    print("All Headers:")
+    for header, value in request.headers.items():
+        print(f"{header}: {value}")
+    
+    # List of headers to check for IP address
+    headers = [
+        'X-Forwarded-For',
+        'X-Real-IP',
+        'CF-Connecting-IP',  # Cloudflare
+        'True-Client-IP',    # Akamai
+        'X-Client-IP'        # Custom
+    ]
+    
+    # Check each header
+    for header in headers:
+        ip = request.headers.get(header)
+        if ip:
+            # X-Forwarded-For can contain multiple IPs
+            if header == 'X-Forwarded-For':
+                ip = ip.split(',')[0].strip()
+            print(f"Found IP from {header}: {ip}")
+            return ip
+    
+    print("No IP found in headers, using remote_addr")
     return request.remote_addr
 
 if __name__ == '__main__':
