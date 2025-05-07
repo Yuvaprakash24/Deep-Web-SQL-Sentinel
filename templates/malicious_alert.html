@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Malicious Attempt Detected</title>
+    <script>
+        window.onload = function() {
+            alert("You are trying to SQL injection");
+            window.location.href = "{{ url_for('blocked') }}";
+        }
+    </script>
+    <style>
+        body {
+            background-color: #23395d;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .message {
+            background: #1e3a8a;
+            padding: 40px 60px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .message h1 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <h1>Malicious Attempt Detected</h1>
+        <p>If you are not attempting a SQL injection, please contact support.</p>
+    </div>
+</body>
+</html> 

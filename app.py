@@ -63,11 +63,12 @@ class BlockedIP(db.Model):
 
 @app.before_request
 def check_blocked_ip():
-    if request.endpoint and 'static' not in request.endpoint:
+    # Skip check for static files and the blocked page itself
+    if request.endpoint and 'static' not in request.endpoint and request.endpoint != 'blocked':
         ip = get_client_ip()
         blocked = BlockedIP.query.filter_by(ip_address=ip).first()
         if blocked:
-            abort(403)  # Forbidden
+            return render_template('blocked.html', reason=blocked.reason), 403
 
 def block_ip(ip_address, reason):
     blocked = BlockedIP(
@@ -220,7 +221,7 @@ def login():
                     attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
                     print(f"Malicious attempt blocked for IP: {ip_address}")
-                    return redirect(url_for('403'))
+                    return render_template('malicious_alert.html')
 
                 return redirect(url_for('activity'))
             else:
@@ -243,6 +244,7 @@ def login():
                     attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
                     print(f"Malicious attempt blocked for IP: {ip_address}")
+                    return render_template('malicious_alert.html')
                 else:
                     flash('Invalid email or password.', 'danger')
         else:
@@ -313,6 +315,13 @@ def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
+
+@app.route('/blocked')
+def blocked():
+    ip = get_client_ip()
+    blocked = BlockedIP.query.filter_by(ip_address=ip).first()
+    reason = blocked.reason if blocked else "Unknown"
+    return render_template('blocked.html', reason=reason), 403
 
 def get_client_ip():
     """

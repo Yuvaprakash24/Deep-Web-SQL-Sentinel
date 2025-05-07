@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Access Blocked</title>
+    <style>
+        body {
+            background-color: #23395d;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .message {
+            background: #1e3a8a;
+            padding: 40px 60px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .message h1 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        .reason {
+            color: #ffb300;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <h1>You Have Been Blocked</h1>
+        <p>Your IP address has been blocked from accessing this site.</p>
+        <div class="reason">
+            Reason: {{ reason }}
+        </div>
+    </div>
+</body>
+</html> 
