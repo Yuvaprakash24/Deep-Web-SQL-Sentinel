@@ -3,6 +3,7 @@
 {% block title %}Security Activity Log{% endblock %}
 
 {% block content %}
+{% set blocked_ip_set = blocked_ips | map(attribute='ip_address') | list %}
 <style>
     body {
         background-color: #23395d; /* Classy ashy blue background */
@@ -125,6 +126,18 @@
                         <span class="suspicious-status">Suspicious</span>
                     {% else %}
                         <span class="safe-status">Safe</span>
+                    {% endif %}
+                    {% if attempt.ip_address %}
+                        {% if attempt.ip_address in blocked_ip_set %}
+                            <span class="badge bg-danger" style="margin-left: 10px;">Blocked</span>
+                            <form action="{{ url_for('unblock_ip_route', ip_address=attempt.ip_address) }}" method="POST" style="display: inline; margin-left: 10px;">
+                                <button type="submit" class="btn btn-warning btn-sm">Unblock IP</button>
+                            </form>
+                        {% else %}
+                            <form action="{{ url_for('block_ip_route', ip_address=attempt.ip_address) }}" method="POST" style="display: inline; margin-left: 10px;">
+                                <button type="submit" class="btn btn-danger btn-sm">Block IP</button>
+                            </form>
+                        {% endif %}
                     {% endif %}
                 </li>
             {% endfor %}

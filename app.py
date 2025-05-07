@@ -64,25 +64,15 @@ class BlockedIP(db.Model):
 @app.before_request
 def check_blocked_ip():
     if request.endpoint and 'static' not in request.endpoint:
-        ip = request.remote_addr
+        ip = get_client_ip()
         blocked = BlockedIP.query.filter_by(ip_address=ip).first()
         if blocked:
-            if blocked.expires_at is None or blocked.expires_at > datetime.now():
-                abort(403)  # Forbidden
-            else:
-                # Remove expired block
-                db.session.delete(blocked)
-                db.session.commit()
+            abort(403)  # Forbidden
 
-def block_ip(ip_address, reason, duration_days=None):
-    expires_at = None
-    if duration_days:
-        expires_at = datetime.now(timezone.utc) + timedelta(days=duration_days)
-    
+def block_ip(ip_address, reason):
     blocked = BlockedIP(
         ip_address=ip_address,
-        reason=reason,
-        expires_at=expires_at
+        reason=reason
     )
     db.session.add(blocked)
     db.session.commit()
@@ -226,10 +216,11 @@ def login():
 
                 # Block IP if malicious
                 if is_malicious:
-                    block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
+                    block_ip(ip_address, "Malicious login attempt detected")
                     attempt_info = f"User ID: {user.id}, Email: {user.email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
                     print(f"Malicious attempt blocked for IP: {ip_address}")
+                    return redirect(url_for('403'))
 
                 return redirect(url_for('activity'))
             else:
@@ -248,7 +239,7 @@ def login():
 
                 # Block IP if malicious
                 if is_malicious:
-                    block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
+                    block_ip(ip_address, "Malicious login attempt detected")
                     attempt_info = f"User ID: {user.id if user else 'Unknown'}, Email: {email}, Time: {new_attempt.timestamp.strftime('%d-%m-%Y %I:%M:%S %p')}, IP: {ip_address}"
                     send_email(user.email, attempt_info)
                     print(f"Malicious attempt blocked for IP: {ip_address}")
@@ -261,7 +252,7 @@ def login():
             is_suspicious = result == 'suspicious'
             
             if is_malicious:
-                block_ip(ip_address, "Malicious login attempt detected", duration_days=30)
+                block_ip(ip_address, "Malicious login attempt detected")
                 flash('Login failed. Check your email or password.', 'danger')
             else:
                 flash('Invalid email or password.', 'danger')
@@ -275,12 +266,47 @@ def activity():
     user_id = session['user_id']
     user = User.query.get(user_id)
     attempts = LoginAttempt.query.filter_by(user_id=user_id).all()
+    blocked_ips = BlockedIP.query.all()
     ist = pytz.timezone('Asia/Kolkata')
     # Ensure all timestamps are UTC-aware
     for attempt in attempts:
         if attempt.timestamp and attempt.timestamp.tzinfo is None:
             attempt.timestamp = attempt.timestamp.replace(tzinfo=timezone.utc)
-    return render_template('activity.html', user=user, attempts=attempts, ist=ist)
+    return render_template('activity.html', user=user, attempts=attempts, blocked_ips=blocked_ips, ist=ist)
+
+@app.route('/block_ip/<ip_address>', methods=['POST'])
+def block_ip_route(ip_address):
+    if 'user_id' not in session:
+        flash('Please log in first.', 'danger')
+        return redirect(url_for('login'))
+    
+    # Check if IP is already blocked
+    existing_block = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    if existing_block:
+        flash('IP is already blocked.', 'warning')
+        return redirect(url_for('activity'))
+    
+    # Block the IP
+    block_ip(ip_address, "Manually blocked by user")
+    flash(f'IP {ip_address} has been blocked.', 'success')
+    return redirect(url_for('activity'))
+
+@app.route('/unblock_ip/<ip_address>', methods=['POST'])
+def unblock_ip_route(ip_address):
+    if 'user_id' not in session:
+        flash('Please log in first.', 'danger')
+        return redirect(url_for('login'))
+    
+    # Find and remove the block
+    blocked = BlockedIP.query.filter_by(ip_address=ip_address).first()
+    if blocked:
+        db.session.delete(blocked)
+        db.session.commit()
+        flash(f'IP {ip_address} has been unblocked.', 'success')
+    else:
+        flash('IP was not blocked.', 'warning')
+    
+    return redirect(url_for('activity'))
 
 @app.route('/logout')
 def logout():
