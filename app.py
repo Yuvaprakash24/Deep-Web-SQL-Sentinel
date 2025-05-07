@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 # from MODELS.logistic_regression_model import check_login_attempt
 # Retrain the model every time the server starts
 # exec(open('MODELS/train_model.py').read())
-from MODELS.random_forest_model import load_model
-load_model()  # loads pre-trained model
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pytz
 
