@@ -191,7 +191,7 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        ip_address = request.remote_addr
+        ip_address = get_client_ip()
         
         user = User.query.filter_by(email=email).first()
         if user:
@@ -269,6 +269,12 @@ def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('index'))
+
+def get_client_ip():
+    if request.headers.get('X-Forwarded-For'):
+        # X-Forwarded-For can be a comma-separated list of IPs
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
 
 if __name__ == '__main__':
     app.run(debug=True)
