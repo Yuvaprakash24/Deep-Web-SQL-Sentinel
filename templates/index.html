@@ -1,162 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Deep Web SQL Sentinel</title>
-    <style>
-        body {
-            background-color: #23395d; /* Classy ashy blue background */
-            font-family: 'Arial', sans-serif;
-            color: #ffffff;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
+{% extends "base.html" %}
 
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #1e3a8a;
-            padding: 10px 20px;
-        }
+{% block title %}Welcome{% endblock %}
 
-        .navbar-brand {
-            color: white;
-            font-size: 1.5em;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease-in-out;
-        }
-
-        .navbar a:hover {
-            background-color: #3b82f6;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .welcome-section {
-            padding: 40px 0;
-            animation: fadeIn 2s ease-in-out;
-        }
-
-        .welcome-section h1 {
-            color: #ffffff;
-            font-size: 3em;
-        }
-
-        .welcome-section .lead {
-            color: #a1c6ea;
-            font-size: 1.5em;
-            margin: 20px 0;
-        }
-
-        .register-section {
-            background-color: #1e3a8a; /* Darker blue for form background */
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            animation: fadeInUp 2s ease-in-out;
-        }
-
-        .register-section h2 {
-            color: #ffffff;
-            margin-top: 30px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            animation: fadeIn 2s ease-in-out;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #a1c6ea;
-            border-radius: 4px;
-            box-sizing: border-box;
-            background-color: #2e4a7b; /* Darker blue for input fields */
-            color: white;
-        }
-
-        .btn-primary {
-            background-color: #3b82f6;
-            border: none;
-            padding: 10px 20px;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease-in-out;
-        }
-
-        .btn-primary:hover {
-            background-color: #1e40af;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-</head>
-<body>
-    <div class="navbar">
-        <a href="#" class="navbar-brand">Deep Web SQL Sentinel</a>
-        <a href="{{ url_for('login') }}">Login</a>
-    </div>
-    <div class="container">
-        <div class="welcome-section">
-            <h1>Welcome to Deep Web SQL Sentinel</h1>
-            <p class="lead">Guarding your data with the most advanced SQL security measures.</p>
-        </div>
-        
-        <div class="register-section">
-            <h2>Register</h2>
-            <form action="{{ url_for('register') }}" method="post">
-                <div class="form-group">
-                    <label for="username">Username:</label>
-                    <input type="text" name="username" class="form-control" required>
+{% block content %}
+<div class="container">
+    <!-- Welcome Section -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8 text-center">
+            <div class="welcome-section py-5">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fas fa-shield-alt text-primary me-3"></i>
+                    Welcome to Deep Web SQL Sentinel
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Guarding your data with the most advanced SQL security measures
+                </p>
+                <div class="features d-flex justify-content-center gap-4 flex-wrap">
+                    <div class="feature-item">
+                        <i class="fas fa-lock text-primary fs-4"></i>
+                        <span class="ms-2">Secure</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-shield-virus text-primary fs-4"></i>
+                        <span class="ms-2">Protected</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line text-primary fs-4"></i>
+                        <span class="ms-2">Monitored</span>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" name="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password:</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password:</label>
-                    <input type="password" name="confirm_password" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Register</button>
-            </form>
+            </div>
         </div>
     </div>
-</body>
-</html>
+
+    <!-- Register Section -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-lg">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Create Account
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('register') }}" method="post">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                            <label for="username">
+                                <i class="fas fa-user me-2"></i>Username
+                            </label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                            <label for="email">
+                                <i class="fas fa-envelope me-2"></i>Email address
+                            </label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                            <label for="password">
+                                <i class="fas fa-lock me-2"></i>Password
+                            </label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+                            <label for="confirm_password">
+                                <i class="fas fa-lock me-2"></i>Confirm Password
+                            </label>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <div class="small">
+                        Already have an account? 
+                        <a href="{{ url_for('login') }}" class="text-decoration-none">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login here
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .welcome-section {
+        animation: fadeIn 1s ease-in-out;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background-color: rgba(59, 130, 246, 0.1);
+        border-radius: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+        transform: translateY(-2px);
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .card {
+        transition: transform 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .form-floating > .form-control {
+        padding-left: 2.5rem;
+    }
+    
+    .form-floating > label {
+        padding-left: 2.5rem;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        transform: translateY(-1px);
+    }
+    
+    .card-header {
+        background-color: var(--primary-color) !important;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

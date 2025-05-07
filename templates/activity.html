@@ -1,95 +1,68 @@
 {% extends "base.html" %}
-
 {% block title %}Security Activity Log{% endblock %}
 
 {% block content %}
 {% set blocked_ip_set = blocked_ips | map(attribute='ip_address') | list %}
+
 <style>
     body {
-        background-color: #23395d; /* Classy ashy blue background */
-        font-family: 'Arial', sans-serif;
-        color: #ffffff;
-        margin: 0;
-        padding: 0;
-        overflow-x: hidden;
+        background-color: #0f172a;
+        font-family: 'Segoe UI', sans-serif;
+        color: #f8fafc;
     }
 
     .navbar {
+        background-color: #1e3a8a;
+    }
+
+    .ip-card {
+        background-color: #1e293b;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.5s ease;
+    }
+
+    .ip-header {
+        background-color: #334155;
+        padding: 15px 20px;
+        cursor: pointer;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background-color: #1e3a8a;
-        padding: 10px 20px;
     }
 
-    .navbar-brand {
-        color: white;
-        font-size: 1.5em;
-        text-decoration: none;
-        font-weight: bold;
+    .ip-header:hover {
+        background-color: #475569;
     }
 
-    .navbar a {
-        color: white;
-        text-decoration: none;
-        padding: 10px 20px;
-        border-radius: 4px;
-        transition: background-color 0.3s ease-in-out;
+    .ip-logs {
+        display: none;
+        background-color: #1e293b;
+        padding: 15px 20px;
     }
 
-    .navbar a:hover {
-        background-color: #3b82f6;
+    .log-entry {
+        padding: 8px 0;
+        border-bottom: 1px solid #475569;
     }
 
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        text-align: center;
+    .badge-safe {
+        background-color: #16a34a;
     }
 
-    .activity-section {
-        background-color: #1e3a8a; /* Darker blue for section background */
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        animation: fadeInUp 2s ease-in-out;
+    .badge-malicious {
+        background-color: #dc2626;
     }
 
-    .activity-section h1 {
-        color: #ffffff;
-        margin-bottom: 20px;
-        animation: fadeIn 2s ease-in-out;
+    .badge-suspicious {
+        background-color: #f59e0b;
     }
 
-    .activity-section p, .activity-section ul, .activity-section li {
-        color: #ffffff;
-    }
-
-    .activity-section ul {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .activity-section li {
-        background-color: #2e4a7b;
-        margin: 10px 0;
-        padding: 10px;
-        border-radius: 4px;
-        animation: fadeIn 2s ease-in-out;
-    }
-
-    .safe-status {
-        color: #4caf50; /* Green for safe */
-    }
-
-    .malicious-status {
-        color: #f44336; /* Red for malicious */
-    }
-
-    .suspicious-status {
-        color: #ff9800; /* Orange for suspicious */
+    .badge {
+        padding: 5px 10px;
+        border-radius: 6px;
     }
 
     @keyframes fadeIn {
@@ -97,54 +70,65 @@
         to { opacity: 1; }
     }
 
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+    .btn-sm {
+        margin-left: 10px;
     }
 </style>
 
-<div class="navbar">
-    <a href="#" class="navbar-brand">Deep Web SQL Sentinel</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
+<div class="container py-5">
+    <h2 class="text-center mb-4">🔐 Security Activity Log</h2>
+    {% if user %}
+        <p class="text-center">Welcome, <strong>{{ user.username }}</strong>!</p>
+    {% endif %}
+
+    {% set logs_by_ip = {} %}
+    {% for attempt in attempts %}
+        {% set _ = logs_by_ip.setdefault(attempt.ip_address, []).append(attempt) %}
+    {% endfor %}
+
+    {% for ip, ip_attempts in logs_by_ip.items() %}
+        <div class="ip-card">
+            <div class="ip-header" onclick="toggleLogs('{{ ip | replace('.', '_') }}')">
+                <span><strong>{{ ip }}</strong></span>
+                <div>
+                    {% if ip in blocked_ip_set %}
+                        <span class="badge bg-danger">Blocked</span>
+                        <form action="{{ url_for('unblock_ip_route', ip_address=ip) }}" method="POST" style="display:inline;">
+                            <button class="btn btn-warning btn-sm" type="submit">Unblock IP</button>
+                        </form>
+                    {% else %}
+                        <form action="{{ url_for('block_ip_route', ip_address=ip) }}" method="POST" style="display:inline;">
+                            <button class="btn btn-danger btn-sm" type="submit">Block IP</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="ip-logs" id="log_{{ ip | replace('.', '_') }}">
+                {% for attempt in ip_attempts %}
+                    <div class="log-entry">
+                        {{ attempt.timestamp.astimezone(ist).strftime('%d-%m-%Y %I:%M:%S %p') }} - 
+                        {% if attempt.is_malicious %}
+                            <span class="badge badge-malicious">Malicious</span>
+                        {% elif attempt.is_suspicious %}
+                            <span class="badge badge-suspicious">Suspicious</span>
+                        {% else %}
+                            <span class="badge badge-safe">Safe</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
 </div>
 
-<div class="container">
-    <div class="activity-section">
-        <h1>Security Activity Log</h1>
-        {% if user %}
-            <p>Welcome, {{ user.username }}!</p>
-        {% endif %}
-        {% if attempts %}
-            <ul>
-            {% for attempt in attempts %}
-                <li>
-                    {{ attempt.timestamp.astimezone(ist).strftime('%d-%m-%Y %I:%M:%S %p') }} - 
-                    <span style="color:#aaa;">{{ attempt.ip_address }}</span> - 
-                    {% if attempt.is_malicious %}
-                        <span class="malicious-status">Malicious</span>
-                    {% elif attempt.is_suspicious %}
-                        <span class="suspicious-status">Suspicious</span>
-                    {% else %}
-                        <span class="safe-status">Safe</span>
-                    {% endif %}
-                    {% if attempt.ip_address %}
-                        {% if attempt.ip_address in blocked_ip_set %}
-                            <span class="badge bg-danger" style="margin-left: 10px;">Blocked</span>
-                            <form action="{{ url_for('unblock_ip_route', ip_address=attempt.ip_address) }}" method="POST" style="display: inline; margin-left: 10px;">
-                                <button type="submit" class="btn btn-warning btn-sm">Unblock IP</button>
-                            </form>
-                        {% else %}
-                            <form action="{{ url_for('block_ip_route', ip_address=attempt.ip_address) }}" method="POST" style="display: inline; margin-left: 10px;">
-                                <button type="submit" class="btn btn-danger btn-sm">Block IP</button>
-                            </form>
-                        {% endif %}
-                    {% endif %}
-                </li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>No activity recorded.</p>
-        {% endif %}
-    </div>
-</div>
+<script>
+    function toggleLogs(id) {
+        const logDiv = document.getElementById('log_' + id);
+        if (logDiv.style.display === 'block') {
+            logDiv.style.display = 'none';
+        } else {
+            logDiv.style.display = 'block';
+        }
+    }
+</script>
 {% endblock %}
